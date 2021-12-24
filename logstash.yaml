@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  labels:
+    app: logstash
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash
+        image: docker.elastic.co/logstash/logstash:6.6.1
+        env:
+        - name: PATH_CONFIG
+          value: "/usr/share/logstash/pipeline"
+        - name: HTTP_HOST
+          value: "0.0.0.0"
+        - name: XPACK_MONITORING_ENABLED
+          value: "true"
+        - name: LS_JAVA_OPTS
+          value: -Xmx256m -Xms256m
+        ports:
+        - containerPort: 5000
+        - containerPort: 28777
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/share/logstash/pipeline
+      volumes:
+      - name: config-volume
+        configMap:
+          name: logstash-config
+      hostAliases:
+      - ip: 127.0.0.1
+        hostnames:
+        - logstash
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: logstash
+  name: logstash
+spec:
+  ports:
+  - name: "5000"
+    port: 5000
+    targetPort: 5000
+  - name: "28777"
+    port: 28777
+    targetPort: 28777
+  - name: "9600"
+    port: 9600
+    targetPort: 9600
+  selector:
+    app: logstash
